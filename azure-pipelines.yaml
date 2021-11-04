@@ -1,0 +1,7 @@
+name: Deploy Druid
+trigger:
+  - main
+
+jobs:
+  - deployment: createInfra
+    displayName: Create Infrastructure

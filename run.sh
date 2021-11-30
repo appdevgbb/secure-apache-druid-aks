@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+set -eEo pipefail 
+
+source run.rc
+source common/druid.subr 
+source common/azure.subr
+source common/utils.subr
 
 __usage="
     -f  filename for the payload
@@ -19,71 +25,47 @@ cmd() {
     "$@"
 }
 
-druid_ns() {
-  # Create a Namespace for Druid
-  cmd kubectl $1 ns druid
-
-  # Setup Service Account
-  cmd kubectl $1 -f deploy/service_account.yaml
-
-  # Setup RBAC
-  cmd kubectl $1 -f deploy/role.yaml
-  cmd kubectl $1 -f deploy/role_binding.yaml
-}
-
-druid_crd() {
-  # Setup the CRD
-  cmd kubectl $1 -f deploy/crds/druid.apache.org_druids.yaml
-}
-
-druid_operator() {
-  # Deploy the druid-operator
-  cmd kubectl $1 -f deploy/operator.yaml
-
-  if [[ $1 == 'create' ]]; then
-    # Check the deployed druid-operator
-    cmd kubectl describe deployment druid-operator
-  fi
-}
-
-druid_cluster() {
-  # Deploy a sample druid cluster
-  cmd kubectl $1 -f  examples/tiny-cluster-zk.yaml
-
-  # hack: for the tiny cluster to work I had to change the fsGroup,runAsUser and runAsGroup to 0. 
-  cmd kubectl $1 -f  examples/tiny-cluster.yaml
-}
-
-druid_addons() {
-  # druid-exporter
-  local DRUID_EXPORTER_GH=https://raw.githubusercontent.com/opstree/druid-exporter/master
-  cmd kubectl $1 -f $DRUID_EXPORTER_GH/manifests/deployment.yaml -n druid
-  cmd kubectl $1 -f $DRUID_EXPORTER_GH/manifests/service.yaml -n druid
-
-  echo "Open Grafana and add the following dashboard: 12155"
-  echo "https://grafana.com/grafana/dashboards/12155"
-}
-
-do_install() {
+do_install_druid() {
   druid_ns create
   druid_crd create
   druid_operator create
   druid_cluster create
 }
 
-do_delete() {
+do_delete_druid() {
+ echo "removing Druid from the Cluster"
  druid_cluster delete
  druid_operator delete
  druid_crd delete
- druid_ns delete 
+ druid_ns delete
+
+}
+
+# install the Azure resources and Druid
+do_install() {
+    rg_create
+    create_ssh_keys
+    load_ssh_keys
+    cluster_deploy
+    aks_get_credentials
+    do_install_druid
+}
+
+# removes the Azure resources and Druid
+do_delete() {
+  do_delete_druid
+  do_delete_azure_resources
 }
 
 exec_case() {
     local _opt=$1
 
     case ${_opt} in
-    install)    do_install;;
-    delete)     do_delete;;
+    install)          do_install;;
+    delete)           do_delete;;
+    install-druid)    do_install_druid;;
+    delete-druid)     do_delete_druid;;
+    dry-run)          cluster_dry_run;;
     *)          usage;;
     esac
     unset _opt

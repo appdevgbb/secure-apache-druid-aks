@@ -1,0 +1,25 @@
+SSH_KEY_NAME=$PREFIX"_id_rsa"
+
+load_ssh_keys() {
+        SSH_PRIV_KEY="$(cat $SSH_KEY_PATH/$SSH_KEY_NAME)"
+        SSH_PUB_KEY="$(cat $SSH_KEY_PATH/$SSH_KEY_NAME.pub)"
+        export SSH_PRIV_KEY SSH_PUB_KEY
+}
+
+create_ssh_keys() {
+    # Generate ssh-key pair
+    if [ -f "$SSH_KEY_PATH/$SSH_KEY_NAME" ]
+    then
+        echo "$SSH_KEY_PATH/$SSH_KEY_NAME exists. Skipping SSH Key Gen"
+        load_ssh_keys
+    else
+        echo "$SSH_KEY_PATH/$SSH_KEY_NAME does not exist...Generating SSH Key"
+        echo "Creating ssh key directory..."
+        mkdir -p $SSH_KEY_PATH
+        echo "Generating ssh key..."
+        ssh-keygen -f $SSH_KEY_PATH/$SSH_KEY_NAME -N ''
+        chmod 400 $SSH_KEY_PATH/$SSH_KEY_NAME
+
+        load_ssh_keys
+    fi
+}

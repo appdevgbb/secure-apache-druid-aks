@@ -48,6 +48,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2021-03-01' = {
     subnets: [
       AzureFirewallSubnetInfo
       aksSubnetInfo
+      jumpboxSubnetInfo
     ]
   }
 }
@@ -55,7 +56,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2021-03-01' = {
 module sqlServer 'modules/sqlazure.bicep' = {
   name: 'sqlserver'
   params: {
-    prefix: name
+    prefix: prefix
     adminUsername: sqlAdminUsername
     adminPassword: sqlAdminPassword
   }
@@ -64,9 +65,7 @@ module sqlServer 'modules/sqlazure.bicep' = {
 module aks 'modules/aks.bicep' = {
   name: 'aks-deployment'
   params: {
-    name: format('{0}-aks',name)
-    adminUsername: adminUsername
-    adminPublicKey: adminPublicKey
+    prefix: prefix
     subnetId: '${vnet.id}/subnets/${aksSubnetInfo.name}'
   }
 
@@ -79,7 +78,6 @@ module jump 'modules/jump.bicep' = {
     subnetId: '${vnet.id}/subnets/${jumpboxSubnetInfo.name}'
     adminUsername: adminUsername
     adminPublicKey: adminPublicKey
-    //managedIdentity: jumpManagedIdentity
   }
 }
 

@@ -6,7 +6,7 @@ param subnetId string
   'Standard_D4s_v3'
 ])
 param vmSize string = 'Standard_D4s_v3'
-param adminUsername string = 'retroadmin'
+param adminUsername string
 param adminPublicKey string
 //param managedIdentity string
 var customData = base64('''
@@ -20,6 +20,10 @@ runcmd:
   - curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
   # Install Azure CLI
   - curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+  # Install k9s
+  - curl -sS https://webinstall.dev/k9s | bash && echo export PATH="/home/reddogadmin/.local/bin:$PATH" >> ~/.bashrc"
+  # customize bash
+  - echo alias k=kubectl >> ~/.bashrc"
   # Create init done file
   - touch /tmp/cloud-init-done
 ''')
@@ -62,10 +66,7 @@ resource jump 'Microsoft.Compute/virtualMachines@2020-12-01' = {
   name: '${name}-vm-deployment'
   location: resourceGroup().location
   identity: {
-     type: 'UserAssigned'
-    // userAssignedIdentities: {
-    //   '${managedIdentity}':{}
-    // }
+     type: 'SystemAssigned'
   }
   properties: {
     hardwareProfile: {
@@ -113,5 +114,5 @@ resource jump 'Microsoft.Compute/virtualMachines@2020-12-01' = {
   }
 }
 
-// Outputs
+/* Outputs */
 output jumpPublicIP string = pubip.properties.ipAddress

@@ -1,6 +1,4 @@
-param name string
-param adminUsername string
-param adminPublicKey string
+param prefix string
 param subnetId string
 
 var defaultAksSettings = {
@@ -45,9 +43,9 @@ var defaultNodePoolSettings = {
 
 var defaultSystemNodePoolSettings = union(defaultNodePoolSettings, {
   mode: 'System' // setting this to system type for just k8s system services
-  // nodeTaints: [
-  //   'CriticalAddonsOnly=true:NoSchedule' // adding to ensure that only k8s system services run on these nodes
-  // ]
+  nodeTaints: [
+    'CriticalAddonsOnly=true:NoSchedule' // adding to ensure that only k8s system services run on these nodes
+  ]
 })
 
 var defaultUserNodePoolSettings = union(defaultNodePoolSettings, { 
@@ -55,24 +53,14 @@ var defaultUserNodePoolSettings = union(defaultNodePoolSettings, {
 })
 
 resource aks 'Microsoft.ContainerService/managedClusters@2021-03-01' = {
-  name: name 
+  name: '${prefix}-aks' 
   location: resourceGroup().location  
   identity: {
     type: defaultAksSettings.identity
   }
   properties: {
     kubernetesVersion: defaultAksSettings.kubernetesVersion
-    dnsPrefix: name
-    linuxProfile: {
-      adminUsername: adminUsername
-      ssh: {
-        publicKeys: [
-          {
-            keyData: adminPublicKey
-          }
-        ]
-      }
-    }
+    dnsPrefix: prefix
     enableRBAC: defaultAksSettings.enableRBAC
     enablePodSecurityPolicy: false // setting to false since PSPs will be deprecated in favour of Gatekeeper/OPA
 
@@ -91,6 +79,24 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-03-01' = {
     agentPoolProfiles: [
       defaultSystemNodePoolSettings
     ]
+  }
+}
+
+resource usernp 'Microsoft.ContainerService/managedClusters/agentPools@2021-08-01' = {
+  name: '${prefix}usernp'
+  parent: aks
+
+  properties: {
+    mode: defaultUserNodePoolSettings.mode
+        
+    vmSize: 'Standard_D4s_v3'
+    osType: 'Linux'
+    osDiskSizeGB: 50
+    osDiskType: 'Ephemeral'
+    type: 'VirtualMachineScaleSets'
+    count: 2
+
+    enableAutoScaling: false
   }
 }
 

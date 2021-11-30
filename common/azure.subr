@@ -20,7 +20,7 @@ cluster_deploy() {
     --parameters location=$LOCATION \
     --parameters sqlAdminUsername=$SQL_ADMIN \
     --parameters sqlAdminPassword=$SQL_PASSWORD \
-    --parameters adminUsername=$ADMIN_USERNAME \
+    --parameters adminUsername=$ADMIN_USER_NAME \
     --parameters adminPublicKey="$SSH_PUB_KEY"
 }
 

@@ -84,3 +84,4 @@ module jump 'modules/jump.bicep' = {
 /* Outputs */
 output aksName string = aks.outputs.name
 output sqlServerName string = sqlServer.outputs.name
+output jumpboxIP string = jump.outputs.jumpPublicIP

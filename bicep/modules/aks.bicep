@@ -82,6 +82,7 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-03-01' = {
   }
 }
 
+/* User Nodepool - Druid */
 resource usernp 'Microsoft.ContainerService/managedClusters/agentPools@2021-08-01' = {
   name: '${prefix}usernp'
   parent: aks
@@ -97,6 +98,26 @@ resource usernp 'Microsoft.ContainerService/managedClusters/agentPools@2021-08-0
     count: 2
 
     enableAutoScaling: false
+
+    nodeLabels: {
+      app: 'druid'
+    }    
+  }
+}
+
+/* Azure Monitor */
+resource aksAzureMonitor 'Microsoft.OperationalInsights/workspaces@2020-03-01-preview' = {
+  name: '${aks.name}-AzMonitor'
+  tags: {}
+  location: resourceGroup().location
+  properties: {
+    sku: {
+      name: 'Standard'
+    }
+    retentionInDays: 30
+    workspaceCapping: {
+      dailyQuotaGb: 30
+    }
   }
 }
 

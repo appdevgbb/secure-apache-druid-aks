@@ -24,8 +24,17 @@ cluster_deploy() {
     --parameters adminPublicKey="$SSH_PUB_KEY"
 }
 
+# save deployment logs
+cluster_logs() {
+    cmd mkdir -p outputs
+    cmd az deployment group show \
+      --name $ARM_DEPLOYMENT_NAME \
+      --resource-group $RG_NAME \
+      -o json \
+      --query properties.outputs | tee /dev/tty "./outputs/$RG_NAME-bicep-outputs.json"
+}
+
 cluster_dry_run() {
-  rg_create
   echo "testing the deployment"
   cmd az deployment group what-if \
     --name $ARM_DEPLOYMENT_NAME \
@@ -37,21 +46,18 @@ cluster_dry_run() {
     --parameters sqlAdminUsername=$SQL_ADMIN \
     --parameters sqlAdminPassword=$SQL_PASSWORD \
     --parameters adminUsername=$ADMIN_USERNAME \
-    --parameters adminPublicKey=$SSH_PUB_KEY
-}
-
-do_delete_azure_resources() {
-  echo "removing resources in Azure"
-  cmd az group delete --name $RG_NAME --no-wait --yes
-  
-  # retrieves the information about the SP so we can remove it
-  sp_load
-  az ad sp delete --id $SP_ID
+    --parameters adminPublicKey="$SSH_PUB_KEY"
 }
 
 aks_get_credentials() {
-  az aks get-credentials \
-    --name ${prefix}-aks \
+  cmd az aks get-credentials \
+    --name ${PREFIX}-aks \
     --resource-group ${RG_NAME} \
-    --file ${prefix}-aks.kubeconfig
+    --file ${PREFIX}-aks.kubeconfig
+  
+  export KUBECONFIG=${PREFIX}-aks.kubeconfig
+}
+
+scp_kubeconfig_to_jumpbox() {
+  scp $KUBECONFIG 
 }

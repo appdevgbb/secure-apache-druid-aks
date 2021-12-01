@@ -23,3 +23,15 @@ create_ssh_keys() {
         load_ssh_keys
     fi
 }
+
+print_deployment_info() {
+    # Get the host name for the control host
+    JUMP_VM_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .jumpVMName.value)
+    echo "Jump Host Name: $JUMP_VM_NAME" 
+    export JUMP_VM_NAME
+
+    CLUSTER_IP_ADDRESS=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .clusterIP.value)
+    CLUSTER_FQDN=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .clusterFQDN.value)
+    export CLUSTER_FQDN CLUSTER_IP_ADDRESS
+
+}

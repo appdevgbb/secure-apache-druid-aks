@@ -1,63 +1,71 @@
 # create a resource group
 rg_create() {
-  cmd az group create --name $RG_NAME --location $LOCATION
+  cmd az group create --name "${RG_NAME}" --location "${LOCATION}"
 }
 
 # creates a service principal
 sp_create() {
-  cmd az ad sp create-for-rbac --name "sp-$RG_NAME-${RANDOM}" --role Contributor > sp.env
+  cmd az ad sp create-for-rbac --name "sp-${RG_NAME}-${RANDOM}" --role Contributor >sp.env
 }
 
 # deploy the bicep templates
 cluster_deploy() {
   echo "Deploying resources ..."
   cmd az deployment group create \
-    --name $ARM_DEPLOYMENT_NAME \
+    --name "${ARM_DEPLOYMENT_NAME}" \
     --mode Incremental \
-    --resource-group $RG_NAME \
-    --template-file $BICEP_FILE \
-    --parameters prefix=$PREFIX  \
-    --parameters location=$LOCATION \
-    --parameters sqlAdminUsername=$SQL_ADMIN \
-    --parameters sqlAdminPassword=$SQL_PASSWORD \
-    --parameters adminUsername=$ADMIN_USER_NAME \
-    --parameters adminPublicKey="$SSH_PUB_KEY"
+    --resource-group "${RG_NAME}" \
+    --template-file "${BICEP_FILE}" \
+    --parameters prefix="${PREFIX}" \
+    --parameters location="${LOCATION}" \
+    --parameters sqlAdminUsername="${SQL_ADMIN}" \
+    --parameters sqlAdminPassword="${SQL_PASSWORD}" \
+    --parameters adminUsername="${ADMIN_USER_NAME}" \
+    --parameters adminPublicKey="${SSH_PUB_KEY}"
+}
+
+check_cluster_creation() {
+  local deployment
+  deployment=$(az deployment group show \
+    --name "${ARM_DEPLOYMENT_NAME}" \
+    --resource-group "${RG_NAME}" \
+    --query properties.provisioningState)
+
+  if [[ "${deployment}" == "Succeeded" ]]; then
+    err "Resources did not deploy successfully."
+  fi
 }
 
 # save deployment logs
 cluster_logs() {
-    cmd mkdir -p outputs
-    cmd az deployment group show \
-      --name $ARM_DEPLOYMENT_NAME \
-      --resource-group $RG_NAME \
-      -o json \
-      --query properties.outputs | tee /dev/tty "./outputs/$RG_NAME-bicep-outputs.json"
+  mkdir -p outputs
+  az deployment group show \
+    --name "${ARM_DEPLOYMENT_NAME}" \
+    --resource-group "${RG_NAME}" \
+    -o json \
+    --query properties.outputs > ./outputs/$RG_NAME-bicep-outputs.json
 }
 
 cluster_dry_run() {
   echo "testing the deployment"
   cmd az deployment group what-if \
-    --name $ARM_DEPLOYMENT_NAME \
+    --name "${ARM_DEPLOYMENT_NAME}" \
     --mode Incremental \
-    --resource-group $RG_NAME \
-    --template-file $BICEP_FILE \
-    --parameters prefix=$PREFIX  \
-    --parameters location=$LOCATION \
-    --parameters sqlAdminUsername=$SQL_ADMIN \
-    --parameters sqlAdminPassword=$SQL_PASSWORD \
-    --parameters adminUsername=$ADMIN_USERNAME \
-    --parameters adminPublicKey="$SSH_PUB_KEY"
+    --resource-group "${RG_NAME}" \
+    --template-file "${BICEP_FILE}" \
+    --parameters prefix="${PREFIX}" \
+    --parameters location="${LOCATION}" \
+    --parameters sqlAdminUsername="${SQL_ADMIN}" \
+    --parameters sqlAdminPassword="${SQL_PASSWORD}" \
+    --parameters adminUsername="${ADMIN_USER_NAME}" \
+    --parameters adminPublicKey="${SSH_PUB_KEY}"
 }
 
 aks_get_credentials() {
   cmd az aks get-credentials \
-    --name ${PREFIX}-aks \
-    --resource-group ${RG_NAME} \
-    --file ${PREFIX}-aks.kubeconfig
-  
-  export KUBECONFIG=${PREFIX}-aks.kubeconfig
-}
+    --name "${PREFIX}"-aks \
+    --resource-group "${RG_NAME}" \
+    --file "${PREFIX}"-aks.kubeconfig
 
-scp_kubeconfig_to_jumpbox() {
-  scp $KUBECONFIG 
+  export KUBECONFIG="${PREFIX}"-aks.kubeconfig
 }

@@ -1,37 +1,64 @@
-SSH_KEY_NAME=$PREFIX"_id_rsa"
+# a series of common used utils
 
-load_ssh_keys() {
-        SSH_PRIV_KEY="$(cat $SSH_KEY_PATH/$SSH_KEY_NAME)"
-        SSH_PUB_KEY="$(cat $SSH_KEY_PATH/$SSH_KEY_NAME.pub)"
-        export SSH_PRIV_KEY SSH_PUB_KEY
+# a wrapper around the command to be executed
+cmd() {
+  echo "\$ ${@}"
+  "$@" || err "Failed to execute: " "$@"
 }
 
-create_ssh_keys() {
-    # Generate ssh-key pair
-    if [ -f "$SSH_KEY_PATH/$SSH_KEY_NAME" ]
-    then
-        echo "$SSH_KEY_PATH/$SSH_KEY_NAME exists. Skipping SSH Key Gen"
-        load_ssh_keys
-    else
-        echo "$SSH_KEY_PATH/$SSH_KEY_NAME does not exist...Generating SSH Key"
-        echo "Creating ssh key directory..."
-        mkdir -p $SSH_KEY_PATH
-        echo "Generating ssh key..."
-        ssh-keygen -f $SSH_KEY_PATH/$SSH_KEY_NAME -N ''
-        chmod 400 $SSH_KEY_PATH/$SSH_KEY_NAME
+err() {
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*" >&2
+  exit 1
+}
 
-        load_ssh_keys
+check_for_azure_login() {
+    # run a command against Azure to check if we are logged in already.
+    az group list -o none 
+    # save the return code from above. Anything different than 0 means we need to login
+    AZURE_LOGIN=$?
+
+    if [[ ${AZURE_LOGIN} -ne 0 ]]; then
+    # not logged in. Initiate login process
+        az login --use-device-code
+        export AZURE_LOGIN
     fi
 }
 
-print_deployment_info() {
-    # Get the host name for the control host
-    JUMP_VM_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .jumpVMName.value)
-    echo "Jump Host Name: $JUMP_VM_NAME" 
-    export JUMP_VM_NAME
+SSH_KEY_NAME=$PREFIX"_id_rsa"
+SSH_KEY_PATH="ssh_keys"
+export SSH_KEY_PATH SSH_KEY_NAME
 
-    CLUSTER_IP_ADDRESS=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .clusterIP.value)
-    CLUSTER_FQDN=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .clusterFQDN.value)
-    export CLUSTER_FQDN CLUSTER_IP_ADDRESS
+load_ssh_keys() {
+  SSH_PRIV_KEY="$(cat ${SSH_KEY_PATH}/"${SSH_KEY_NAME}")"
+  SSH_PUB_KEY="$(cat $SSH_KEY_PATH/"${SSH_KEY_NAME}.pub")"
+  export SSH_PRIV_KEY SSH_PUB_KEY
+}
 
+create_ssh_keys() {
+  # Generate ssh-key pair
+  if [ -f "${SSH_KEY_PATH}/${SSH_KEY_NAME}" ]; then
+    echo "${SSH_KEY_PATH}/${SSH_KEY_NAME} exists. Skipping SSH Key Gen"
+    load_ssh_keys
+  else
+    echo "${SSH_KEY_PATH}/${SSH_KEY_NAME} does not exist...Generating SSH Key"
+    echo "Creating ssh key directory..."
+    mkdir -p ${SSH_KEY_PATH}
+    echo "Generating ssh key..."
+    ssh-keygen -f ${SSH_KEY_PATH}/"${SSH_KEY_NAME}" -N ''
+    chmod 400 ${SSH_KEY_PATH}/"${SSH_KEY_NAME}"
+
+    load_ssh_keys
+  fi
+}
+
+get_deployment_info() {
+  # Get the jump server public IP
+  JUMP_IP=$(jq -r '.jumpboxIP.value' ./outputs/"${RG_NAME}"-bicep-outputs.json)
+  export JUMP_IP
+}
+
+scp_to_jumpbox() {  
+  local FILE=$1
+  echo "copying ${FILE} to jumpbox"
+  scp -i ${SSH_KEY_PATH}/${SSH_KEY_NAME}  -o "StrictHostKeyChecking no" "$FILE" "${ADMIN_USER_NAME}"@"${JUMP_IP}":~/ 
 }

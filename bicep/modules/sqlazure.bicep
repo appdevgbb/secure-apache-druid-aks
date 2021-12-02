@@ -4,8 +4,10 @@ param adminUsername string
 param adminPassword string
 param sqlDBName string = 'gbb-corp'
 
+param baseTime string = utcNow('u')
+var sqlBasename = guid(prefix,adminUsername,adminPassword,baseTime)
 resource azuresql 'Microsoft.Sql/servers@2020-11-01-preview' = {
-  name: '${prefix}-sqlserver'
+  name: '${sqlBasename}-sqlserver'
   location: location
   properties: {
     administratorLogin: adminUsername

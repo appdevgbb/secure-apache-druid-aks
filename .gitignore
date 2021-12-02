@@ -1,2 +1,3 @@
 run.rc
-gbb-aks.kubeconfig
+*.kubeconfig
+ssh_keys/*

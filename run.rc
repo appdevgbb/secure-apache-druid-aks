@@ -1,7 +1,7 @@
 # Global
 PREFIX=gbb
 LOCATION=eastus
-RG_NAME=rg-1
+RG_NAME=rg-druid-demo
 BICEP_FILE=bicep/deploy.bicep
 ARM_DEPLOYMENT_NAME=$PREFIX-$LOCATION-deployment
 
@@ -11,4 +11,3 @@ SQL_PASSWORD="nJ0fqrQx7T^NZFl4sFf*U"
 
 # Linux 
 ADMIN_USER_NAME=retroadmin
-SSH_KEY_PATH='bicep/.ssh/id_rsa.pub'

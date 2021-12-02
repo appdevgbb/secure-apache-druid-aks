@@ -1,24 +1,23 @@
-
 # Create a Namespace for Druid
 druid_ns() {
-  cmd kubectl $1 ns druid
+  cmd kubectl "$1" ns druid
 
   # Setup Service Account
-  cmd kubectl $1 -f deploy/service_account.yaml
+  cmd kubectl "$1" -f deploy/service_account.yaml
 
   # Setup RBAC
-  cmd kubectl $1 -f deploy/role.yaml
-  cmd kubectl $1 -f deploy/role_binding.yaml
+  cmd kubectl "$1" -f deploy/role.yaml
+  cmd kubectl "$1" -f deploy/role_binding.yaml
 }
 
 # Setup the CRD
-druid_crd() {  
-  cmd kubectl $1 -f deploy/crds/druid.apache.org_druids.yaml
+druid_crd() {
+  cmd kubectl "$1" -f deploy/crds/druid.apache.org_druids.yaml
 }
 
 # Deploy the druid-operator
 druid_operator() {
-  cmd kubectl $1 -f deploy/operator.yaml
+  cmd kubectl "$1" -f deploy/operator.yaml
 
   # checks the deployed druid-operator
   if [[ $1 == 'create' ]]; then
@@ -28,17 +27,17 @@ druid_operator() {
 
 # deploy a sample druid cluster
 druid_cluster() {
-  cmd kubectl $1 -f  examples/tiny-cluster-zk.yaml
+  cmd kubectl "$1" -f examples/tiny-cluster-zk.yaml
 
-  # hack: for the tiny cluster to work I had to change the fsGroup,runAsUser and runAsGroup to 0. 
-  cmd kubectl $1 -f  examples/tiny-cluster.yaml
+  # hack: for the tiny cluster to work I had to change the fsGroup,runAsUser and runAsGroup to 0.
+  cmd kubectl "$1" -f examples/tiny-cluster.yaml
 }
 
 druid_addons() {
   # druid-exporter
   local DRUID_EXPORTER_GH=https://raw.githubusercontent.com/opstree/druid-exporter/master
-  cmd kubectl $1 -f $DRUID_EXPORTER_GH/manifests/deployment.yaml -n druid
-  cmd kubectl $1 -f $DRUID_EXPORTER_GH/manifests/service.yaml -n druid
+  cmd kubectl "$1" -f $DRUID_EXPORTER_GH/manifests/deployment.yaml -n druid
+  cmd kubectl "$1" -f $DRUID_EXPORTER_GH/manifests/service.yaml -n druid
 
   echo "Open Grafana and add the following dashboard: 12155"
   echo "https://grafana.com/grafana/dashboards/12155"

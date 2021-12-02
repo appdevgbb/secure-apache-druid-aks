@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
-set -eEo pipefail 
+set -Eo pipefail
 
 source run.rc
-source common/druid.subr 
+source common/druid.subr
 source common/azure.subr
 source common/utils.subr
+
+########################################################################################
+AZURE_LOGIN=0
+########################################################################################
+trap exit SIGINT SIGTERM
 
 __usage="
     -f  filename for the payload
@@ -14,27 +19,24 @@ Possible verbs are:
     delete         delete resources.
 "
 usage() {
-    echo "usage: ${0##*/} [options]"
-    echo "${__usage/[[:space:]]/}"
-    exit 1
-}
-
-# a wrapper around the command to be executed
-cmd() {
-    echo "\$ ${@}"
-    "$@" || echo "[ERROR]: Failed to execute: "$@" "
+  echo "usage: ${0##*/} [options]"
+  echo "${__usage/[[:space:]]/}"
+  exit 1
 }
 
 afterboot_info() {
-    read -r -d '' COMPLETE_MESSAGE << EOM
+  read -r -d '' COMPLETE_MESSAGE <<EOM
 ****************************************************
 [Druid] - Deployment Complete! 
-Jump server connection info: ssh $ADMIN_USER_NAME@$JUMP_IP -i $SSH_KEY_PATH/$SSH_KEY_NAME -p 2022
-Cluster connection info: http://$CLUSTER_IP_ADDRESS:8081 or http://$CLUSTER_FQDN:8081
+Jump server connection info: ssh $ADMIN_USER_NAME@$JUMP_IP -i $SSH_KEY_PATH/$SSH_KEY_NAME
+
+Cluster connection info: 
+  export KUBECONFIG=${PREFIX}-aks.kubeconfig
+  kubectl get nodes
 ****************************************************
 EOM
- 
-  echo "$COMPLETE_MESSAGE" | tee /dev/tty
+
+  echo "$COMPLETE_MESSAGE"
 }
 
 do_install_druid() {
@@ -45,20 +47,21 @@ do_install_druid() {
 }
 
 do_delete_druid() {
- echo "removing Druid from the Cluster"
- druid_cluster delete
- druid_operator delete
- druid_crd delete
- druid_ns delete
+  echo "removing Druid from the Cluster"
+  druid_cluster delete
+  druid_operator delete
+  druid_crd delete
+  druid_ns delete
 }
 
 do_delete_azure_resources() {
   echo "removing resources in Azure"
-  cmd az group delete --name $RG_NAME --no-wait --yes
-  
+  cmd az group delete --name "${RG_NAME}" --no-wait --yes
+
   echo "removing ssh keys"
-  rm -rf $SSH_KEY_PATH/$SSH_KEY_NAME.pub
-  rm -rf $SSH_KEY_PATH/$SSH_KEY_NAME
+  load_ssh_keys
+  cmd rm "${SSH_KEY_PATH:?}/${SSH_KEY_NAME}.pub"
+  cmd rm "${SSH_KEY_PATH:?}/${SSH_KEY_NAME:?}"
 
   echo "removing logs"
   rm -rf ./outputs
@@ -66,66 +69,72 @@ do_delete_azure_resources() {
 
 # install the Azure resources and Druid
 do_install() {
-    rg_create
-    create_ssh_keys
-    load_ssh_keys
-    cluster_deploy
-    cluster_logs
-    aks_get_credentials
-    do_install_druid
-    afterboot_info
+  rg_create
+  create_ssh_keys
+  load_ssh_keys
+  cluster_deploy
+  cluster_logs
+  aks_get_credentials
+  get_deployment_info
+  scp_to_jumpbox "${KUBECONFIG}"
+  do_install_druid
+  afterboot_info
 }
 
 # removes the Azure resources and Druid
 do_delete() {
-  do_delete_druid
   do_delete_azure_resources
 }
 
 do_dry_run() {
-    # create a random rg so we can dry-run the deployment
-    RG_NAME=$RG_NAME-$RANDOM
-    rg_create
+  # create a random rg so we can dry-run the deployment
+  RG_NAME=$RG_NAME-$RANDOM
+  rg_create
 
-    create_ssh_keys
-    load_ssh_keys
-    cluster_dry_run
-    do_delete_azure_resources
+  create_ssh_keys
+  load_ssh_keys
+  cluster_dry_run
+  do_delete_azure_resources
 }
 
 exec_case() {
-    local _opt=$1
+  local _opt=$1
 
-    case ${_opt} in
-    install)            do_install;;
-    delete)             do_delete;;
-    install-druid)      do_install_druid;;
-    delete-druid)       do_delete_druid;;
-    dry-run)            do_dry_run;;
-    *)                  usage;;
-    esac
-    unset _opt
+  case ${_opt} in
+  install) do_install ;;
+  delete) do_delete ;;
+  install-druid) do_install_druid ;;
+  delete-druid) do_delete_druid ;;
+  dry-run) do_dry_run ;;
+  *) usage ;;
+  esac
+  unset _opt
 }
 
-while getopts "f:o:x:" opt; do
+main() {
+  while getopts "x:" opt; do
     case $opt in
-    f)  _FILENAME="${OPTARG}";;
-    o)  _OUTPUT_TYPE="${OPTARG}";;
-    x)  exec_flag=true
-        EXEC_OPT="${OPTARG}"
-        ;;
-    *)  usage;;
+    x)
+      exec_flag=true
+      EXEC_OPT="${OPTARG}"
+      ;;
+    *) usage ;;
     esac
-done
-shift $(( $OPTIND - 1 ))
+  done
+  shift $(($OPTIND - 1))
 
-if [ $OPTIND = 1 ]; then
+  if [ $OPTIND = 1 ]; then
     usage
     exit 0
-fi
+  fi
 
-if [[ "${exec_flag}" == "true" ]]; then
-    exec_case ${EXEC_OPT}
-fi
+  if [[ "${exec_flag}" == "true" ]]; then
+    # check if we are logged first
+    check_for_azure_login
+    exec_case "${EXEC_OPT}"
+  fi
+}
+
+main "$@"
 
 exit 0

@@ -11,7 +11,7 @@ jobs:
       
     - name: azure login
       uses: azure/login@v1
-      env: 
+      with: 
         creds: ${{ secrets.AZURE_CREDENTIALS }}
         
     - name: installs the demo

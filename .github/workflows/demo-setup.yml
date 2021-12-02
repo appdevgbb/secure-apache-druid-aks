@@ -8,8 +8,8 @@ jobs:
     steps:
     - name: azure-login
       uses: azure/login@v1
-      with:
-        creds: ${{ secrets.azure_credentials }}
+      env: 
+          credentials: ${{ secrets.AZURE_CREDENTIALS }}
         
     - name: installs the demo
       if: success()

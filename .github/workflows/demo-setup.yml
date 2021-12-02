@@ -12,7 +12,7 @@ jobs:
     - name: azure login
       uses: azure/login@v1
       with: 
-          creds: ${{ secrets.azure_credentials }}
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
         
     - name: installs the demo
       if: success()

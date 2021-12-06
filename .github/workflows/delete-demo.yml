@@ -16,4 +16,4 @@ jobs:
         
     - name: deletes the demo
       if: success()
-      run: bash run.sh -x delete
+      run: bash run.sh -x delete -o KeepSSHKeys

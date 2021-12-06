@@ -15,5 +15,7 @@ jobs:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
         
     - name: installs the demo
+      env:
+        SSH_PUB_KEY: $$ {{ secrets.SSH_PUB_KEY }}
       if: success()
       run: bash run.sh -x install

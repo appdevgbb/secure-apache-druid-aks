@@ -1,0 +1,19 @@
+name: Install the Demo
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout repository
+      uses: actions/checkout@v2
+      
+    - name: azure login
+      uses: azure/login@v1
+      with: 
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: installs the demo
+      if: success()
+      run: bash run.sh -x install

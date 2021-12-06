@@ -8,6 +8,7 @@ source common/utils.subr
 
 ########################################################################################
 AZURE_LOGIN=0
+PURGE=1
 ########################################################################################
 trap exit SIGINT SIGTERM
 
@@ -58,13 +59,18 @@ do_delete_azure_resources() {
   echo "removing resources in Azure"
   cmd az group delete --name "${RG_NAME}" --no-wait --yes
 
-  echo "removing ssh keys"
-  load_ssh_keys
-  cmd rm "${SSH_KEY_PATH:?}/${SSH_KEY_NAME}.pub"
-  cmd rm "${SSH_KEY_PATH:?}/${SSH_KEY_NAME:?}"
-
-  echo "removing logs"
-  rm -rf ./outputs
+  # default behaviour is to purge the logs and ssh keys
+  # this variable is here to accomodate for when running 
+  # through Github Actions
+  if [[ ${PURGE} -eq 1 ]]; then 
+    echo "removing ssh keys"
+    load_ssh_keys
+    cmd rm "${SSH_KEY_PATH:?}/${SSH_KEY_NAME}.pub"
+    cmd rm "${SSH_KEY_PATH:?}/${SSH_KEY_NAME:?}"
+  
+    echo "removing logs"
+    rm -rf ./outputs
+  fi
 }
 
 # install the Azure resources and Druid
@@ -101,23 +107,38 @@ exec_case() {
   local _opt=$1
 
   case ${_opt} in
-  install) do_install ;;
-  delete) do_delete ;;
-  install-druid) do_install_druid ;;
-  delete-druid) do_delete_druid ;;
-  dry-run) do_dry_run ;;
-  *) usage ;;
+  install)        do_install ;;
+  delete)         do_delete ;;
+  install-druid)  do_install_druid ;;
+  delete-druid)   do_delete_druid ;;
+  dry-run)        do_dry_run ;;
+  *)              usage ;;
+  esac
+  unset _opt
+}
+
+config_case() {
+  local _opt=$1
+
+  case ${_opt} in
+  KeepSSHKeys)    PURGE=0 ;; # dont remove the SSH Keys
+  *)              usage ;;
   esac
   unset _opt
 }
 
 main() {
-  while getopts "x:" opt; do
+  while getopts "o:x:" opt; do
     case $opt in
+    o)
+      opt_flag=true
+      OPTIONS="${OPTARG}"
+      ;;
     x)
       exec_flag=true
       EXEC_OPT="${OPTARG}"
       ;;
+
     *) usage ;;
     esac
   done
@@ -128,11 +149,17 @@ main() {
     exit 0
   fi
 
+  # process options
+  if [[ "${opt_flag}" == "true" ]]; then
+    config_case "${OPTIONS}"
+  fi
+
+  # process actions
   if [[ "${exec_flag}" == "true" ]]; then
     # check if we are logged first
     check_for_azure_login
     exec_case "${EXEC_OPT}"
-  fi
+  fi 
 }
 
 main "$@"

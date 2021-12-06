@@ -29,14 +29,24 @@ SSH_KEY_PATH="ssh_keys"
 export SSH_KEY_PATH SSH_KEY_NAME
 
 load_ssh_keys() {
-  SSH_PRIV_KEY="$(cat ${SSH_KEY_PATH}/"${SSH_KEY_NAME}")"
-  SSH_PUB_KEY="$(cat $SSH_KEY_PATH/"${SSH_KEY_NAME}.pub")"
-  export SSH_PRIV_KEY SSH_PUB_KEY
+  # dont load ssh keys from the filesystem if 
+  # they were passed as environment variables.
+  if [[ -z "SSH_PUB_KEY}" ]]; then
+    SSH_PRIV_KEY="$(cat ${SSH_KEY_PATH}/"${SSH_KEY_NAME}")"
+    SSH_PUB_KEY="$(cat $SSH_KEY_PATH/"${SSH_KEY_NAME}.pub")"
+    export SSH_PRIV_KEY SSH_PUB_KEY
+  fi 
 }
 
 create_ssh_keys() {
   # Generate ssh-key pair
-  if [ -f "${SSH_KEY_PATH}/${SSH_KEY_NAME}" ]; then
+
+  # are we passing SSH keys as environment variables?
+  if [[ -n "${SSH_PUB_KEY}" ]]; then
+    echo "loading SSH public key from env"
+    export SSH_PUB_KEY
+  # if the keys already exist, don't bother creating them
+  elif [[ -f "${SSH_KEY_PATH}/${SSH_KEY_NAME}" ]]; then
     echo "${SSH_KEY_PATH}/${SSH_KEY_NAME} exists. Skipping SSH Key Gen"
     load_ssh_keys
   else

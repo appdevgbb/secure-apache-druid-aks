@@ -13,11 +13,21 @@ PURGE=1
 trap exit SIGINT SIGTERM
 
 __usage="
-    -f  filename for the payload
-    -x  action to be executed. 
+    -o  options
+    -x  action to be executed.
+    
 Possible verbs are:
     install        deploy resources.
     delete         delete resources.
+    dry-run        tries the current Bicep deployment against Azure but doesn't deploy (what-if). 
+
+    Apache Druid:
+    install-druid  only installs the Apache Druid on the cluster.
+    delete-druid   removes Apache Druid from the cluster.
+
+Options:
+    KeepSSHKeys    do not remove the SSH keys (used with the -x delete option).
+
 "
 usage() {
   echo "usage: ${0##*/} [options]"
@@ -61,8 +71,9 @@ do_delete_azure_resources() {
 
   # default behaviour is to purge the logs and ssh keys
   # this variable is here to accomodate for when running 
-  # through Github Actions
-  if [[ ${PURGE} -eq 1 ]]; then 
+  # through Github Actions. Also don't delete the keys if they 
+  # were passed as environment variables
+  if [[ ${PURGE} -eq 1 && -z ${SSH_PUB_KEY} ]]; then 
     echo "removing ssh keys"
     load_ssh_keys
     cmd rm "${SSH_KEY_PATH:?}/${SSH_KEY_NAME}.pub"

@@ -16,6 +16,6 @@ jobs:
         
     - name: installs the demo
       env:
-        SSH_PUB_KEY: ${{ secrets.AUTHORIZED_HOST_KEY }}
+        AUTHORIZED_HOST_KEY: ${{ secrets.AUTHORIZED_HOST_KEY }}
       if: success()
       run: bash run.sh -x install 

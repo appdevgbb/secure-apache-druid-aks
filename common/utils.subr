@@ -31,11 +31,11 @@ export SSH_KEY_PATH SSH_KEY_NAME
 load_ssh_keys() {
   # dont load ssh keys from the filesystem if 
   # they were passed as environment variables.
-  if [[ -z "SSH_PUB_KEY}" ]]; then
+  if [[ -z "${SSH_PUB_KEY}" ]]; then
     SSH_PRIV_KEY="$(cat ${SSH_KEY_PATH}/"${SSH_KEY_NAME}")"
     SSH_PUB_KEY="$(cat $SSH_KEY_PATH/"${SSH_KEY_NAME}.pub")"
     export SSH_PRIV_KEY SSH_PUB_KEY
-  fi 
+  fi
 }
 
 create_ssh_keys() {
@@ -70,5 +70,12 @@ get_deployment_info() {
 scp_to_jumpbox() {  
   local FILE=$1
   echo "copying ${FILE} to jumpbox"
-  scp -i ${SSH_KEY_PATH}/${SSH_KEY_NAME}  -o "StrictHostKeyChecking no" "$FILE" "${ADMIN_USER_NAME}"@"${JUMP_IP}":~/ 
+  scp -i "${SSH_PRIV_KEY}"  -o "StrictHostKeyChecking no" "$FILE" "${ADMIN_USER_NAME}"@"${JUMP_IP}":~/ 
+}
+
+# Execute commands on the remote jump box
+run_on_jumpbox () {
+    # Get the jump server public IP
+    export JUMP_IP=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .publicIP.value)
+    ssh -p 2022 -o "StrictHostKeyChecking no" -i $SSH_KEY_PATH/$SSH_KEY_NAME $ADMIN_USER_NAME@$JUMP_IP $1
 }

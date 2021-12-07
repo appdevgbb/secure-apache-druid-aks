@@ -35,7 +35,14 @@ usage() {
   exit 1
 }
 
-afterboot_info() {
+# execute as the last part of the setup process
+afterboot() {
+
+  #if AUTHORIZED_HOST_KEY is set, add SSH Public keys to the authorized_keys file
+  if [[ -n "${AUTHORIZED_HOST_KEY}" ]]; then
+    echo "${AUTHORIZED_HOST_KEY}" | run_on_jumpbox "cat >> ~/.ssh/authorized_keys"
+  fi
+
   read -r -d '' COMPLETE_MESSAGE <<EOM
 ****************************************************
 [Druid] - Deployment Complete! 
@@ -69,8 +76,8 @@ do_delete_azure_resources() {
   echo "removing resources in Azure"
   cmd az group delete --name "${RG_NAME}" --no-wait --yes
 
-  # default behaviour is to purge the logs and ssh keys
-  # this variable is here to accomodate for when running 
+  # The default behaviour is to purge the logs and ssh keys.
+  # This variable is here to accomodate for when running 
   # through Github Actions. Also don't delete the keys if they 
   # were passed as environment variables
   if [[ ${PURGE} -eq 1 && -z ${SSH_PUB_KEY} ]]; then 
@@ -95,7 +102,7 @@ do_install() {
   get_deployment_info
   scp_to_jumpbox "${KUBECONFIG}"
   do_install_druid
-  afterboot_info
+  afterboot
 }
 
 # removes the Azure resources and Druid

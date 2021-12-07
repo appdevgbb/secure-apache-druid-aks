@@ -1,7 +1,7 @@
 # Global
 PREFIX=gbb
 LOCATION=eastus
-RG_NAME=rg-${PREFIX}-druid-demo
+RG_NAME=rg-${PREFIX}-druid-demo-1
 BICEP_FILE=bicep/deploy.bicep
 ARM_DEPLOYMENT_NAME=$PREFIX-$LOCATION-deployment
 

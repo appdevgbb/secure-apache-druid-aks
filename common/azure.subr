@@ -11,6 +11,9 @@ sp_create() {
 # deploy the bicep templates
 cluster_deploy() {
   echo "Deploying resources ..."
+  echo "Using the following SSH public key: "
+  echo ${SSH_PUB_KEY}
+  echo
   cmd az deployment group create \
     --name "${ARM_DEPLOYMENT_NAME}" \
     --mode Incremental \

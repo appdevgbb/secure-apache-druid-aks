@@ -15,3 +15,21 @@ To remove the entire deployment:
     ```bash
     ./run.sh -x delete
     ```
+
+Usage:
+
+```bash
+run.sh [-x actions][-o options]
+    -o  options
+    -x  action to be executed.
+    
+Possible verbs are:
+    install        deploy resources.
+    delete         delete resources.
+    dry-run        tries the current Bicep deployment against Azure but doesn't deploy (what-if). 
+    Apache Druid:
+    install-druid  only installs the Apache Druid on the cluster.
+    delete-druid   removes Apache Druid from the cluster.
+Options:
+    KeepSSHKeys    do not remove the SSH keys (used with the -x delete option).
+```

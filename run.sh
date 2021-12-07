@@ -38,9 +38,9 @@ usage() {
 # execute as the last part of the setup process
 afterboot() {
 
-  #if AUTHORIZED_HOST_KEY is set, add SSH Public keys to the authorized_keys file
-  if [[ -n "${AUTHORIZED_HOST_KEY}" ]]; then
-    echo "${AUTHORIZED_HOST_KEY}" | run_on_jumpbox "cat >> ~/.ssh/authorized_keys"
+  #if AUTHORIZED_HOST_KEYS is set, add SSH Public keys to the authorized_keys file
+  if [[ -n "${AUTHORIZED_HOST_KEYS}" ]]; then
+    echo "${AUTHORIZED_HOST_KEYS}" | run_on_jumpbox "cat >> ~/.ssh/authorized_keys"
   fi
 
   read -r -d '' COMPLETE_MESSAGE <<EOM
